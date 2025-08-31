@@ -249,11 +249,8 @@ void move_to_point(float x, float y, float z, const String& method = "wrist", Or
 Point3D process_PS4_input(Point3D current_pos) {
     Point3D new_pos = current_pos;
     
-    // Sterowanie lewym analogowym (X, Y)
     int ly = PS4.data.analog.stick.ly; // -128 do 127
     int lx = PS4.data.analog.stick.lx;
-    
-    // Sterowanie prawym analogowym (Z)
     int ry = PS4.data.analog.stick.ry;
     
     // Ruch w osi X (lewy analog lewo/prawo)
