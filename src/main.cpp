@@ -12,7 +12,12 @@ SMS_STS st;
 #define S_RXD 18
 #define S_TXD 19
 
-// Konfiguracja manipulatora
+#define S_SCL 22
+#define S_SDA 21
+
+#define RGB_LED   23
+#define NUMPIXELS 10
+
 const float L1 = 120.0;  
 const float L2 = 120.0;  
 const float L3 = 110.0;  
