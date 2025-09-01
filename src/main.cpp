@@ -6,6 +6,7 @@
 #include <math.h>
 #include <SCServo.h>
 #include <PS4Controller.h>
+#include "board.h"
 
 SMS_STS st;
 
@@ -262,22 +263,23 @@ Point3D process_PS4_input(Point3D current_pos) {
     int ry = PS4.data.analog.stick.ry;
     
     // Ruch w osi X (lewy analog góra/dół)
-    if (abs(ly) > 20) { // Dead zone
-        new_pos.x += (ly / 127.0) * move_step;
+    if (abs(ly) > 50) { // Dead zone
+        new_pos.x += (-ly / 127.0) * move_step;
     }
     
     // Ruch w osi Y (lewy analog lewo/prawo)
-    if (abs(lx) > 20) {
+    if (abs(lx) > 50) {
         new_pos.y += (-lx / 127.0) * move_step;
     }
     
     // Ruch w osi Z (prawy analog góra/dół) pozostaje bez zmian
-    if (abs(ry) > 20) {
-        new_pos.z += (ry / 127.0) * move_step;
+    if (abs(ry) > 50) {
+        new_pos.z += (-ry / 127.0) * move_step;
     }
     
     return new_pos;
 }
+
 void onConnect() {
     Serial.println("PS4 controller connected");
 }
@@ -294,8 +296,12 @@ void setup() {
     PS4.attachOnConnect(onConnect);
     PS4.attachOnDisconnect(onDisconnect);
     PS4.begin(); 
-    
     delay(1000);
+
+    InitScreen();
+    delay(5000);
+
+    scanServos();
     Serial.println("Inicjalizacja zakończona");
     
     move_to_point(current_position.x, current_position.y, current_position.z, 
