@@ -1,3 +1,7 @@
+// The Bluetooth MAC address of the ESP32 must be uploaded 
+// to the PS4 controller using the Sixaxis pairing tool.
+// A0:DD:6C:85:54:9E
+
 #include <Arduino.h>
 #include <math.h>
 #include <SCServo.h>
@@ -245,38 +249,34 @@ void move_to_point(float x, float y, float z, const String& method = "wrist", Or
     moveServosSyncEx(ids, servo_angles, max_speed, 50);
 }
 
-// Funkcja do przetwarzania wejścia z pada PS4
 Point3D process_PS4_input(Point3D current_pos) {
     Point3D new_pos = current_pos;
     
-    int ly = PS4.data.analog.stick.ly; // -128 do 127
-    int lx = PS4.data.analog.stick.lx;
+    int ly = PS4.data.analog.stick.ly; // -128 (GÓRA) do 127 (DÓŁ)
+    int lx = PS4.data.analog.stick.lx; // -128 (LEWO) do 127 (PRAWO)
     int ry = PS4.data.analog.stick.ry;
     
-    // Ruch w osi X (lewy analog lewo/prawo)
-    if (abs(lx) > 20) { // Dead zone
-        new_pos.x += (lx / 127.0) * move_step;
+    // Ruch w osi X (lewy analog góra/dół)
+    if (abs(ly) > 20) { // Dead zone
+        new_pos.x += (ly / 127.0) * move_step;
     }
     
-    // Ruch w osi Y (lewy analog góra/dół)
-    if (abs(ly) > 20) {
-        new_pos.y += (ly / 127.0) * move_step;
+    // Ruch w osi Y (lewy analog lewo/prawo)
+    if (abs(lx) > 20) {
+        new_pos.y += (-lx / 127.0) * move_step;
     }
     
-    // Ruch w osi Z (prawy analog góra/dół)
+    // Ruch w osi Z (prawy analog góra/dół) pozostaje bez zmian
     if (abs(ry) > 20) {
         new_pos.z += (ry / 127.0) * move_step;
     }
     
     return new_pos;
 }
-
-// Callback dla połączenia PS4
 void onConnect() {
     Serial.println("PS4 controller connected");
 }
 
-// Callback dla rozłączenia PS4
 void onDisconnect() {
     Serial.println("PS4 controller disconnected");
 }
@@ -286,15 +286,13 @@ void setup() {
     Serial1.begin(1000000, SERIAL_8N1, S_RXD, S_TXD);
     st.pSerial = &Serial1;
     
-    // Inicjalizacja PS4 Controller
     PS4.attachOnConnect(onConnect);
     PS4.attachOnDisconnect(onDisconnect);
-    PS4.begin("00:00:00:00:00:00"); // Ustaw adres MAC ESP32
+    PS4.begin(); 
     
     delay(1000);
     Serial.println("Inicjalizacja zakończona");
     
-    // Początkowy ruch do pozycji startowej
     move_to_point(current_position.x, current_position.y, current_position.z, 
                  method.c_str(), orientation_mode, 500);
 }
@@ -310,12 +308,10 @@ void loop() {
     static int lastCircleState = 0;
     static int lastCrossState = 0;
     
-    // Odczyt stanu przycisków
     int triangle = PS4.data.button.triangle;
     int circle = PS4.data.button.circle;
     int cross = PS4.data.button.cross;
     
-    // Obsługa przycisku TRIANGLE - orientacja w dół
     if (triangle && !lastTriangleState) {
         orientation_mode = ORIENTATION_DOWN;
         move_to_point(current_position.x, current_position.y, current_position.z, 
@@ -323,7 +319,6 @@ void loop() {
         Serial.println("Orientacja: w dół");
     }
     
-    // Obsługa przycisku CIRCLE - orientacja pozioma
     if (circle && !lastCircleState) {
         orientation_mode = ORIENTATION_FLAT;
         move_to_point(current_position.x, current_position.y, current_position.z, 
@@ -331,13 +326,11 @@ void loop() {
         Serial.println("Orientacja: pozioma");
     }
     
-    // Obsługa przycisku CROSS - zmiana trybu (full/wrist)
     if (cross && !lastCrossState) {
         method = (method == "full") ? "wrist" : "full";
         move_step = (method == "wrist") ? MOVE_STEP_SMALL : MOVE_STEP_LARGE;
         
         if (method == "wrist") {
-            // Konwersja obecnej pozycji na punkt nadgarstka
             JointAngles angles = solve_ik_full(current_position.x, current_position.y, current_position.z);
             Point3D wrist_point = find_wrist_point(angles.theta1, angles.theta2, angles.theta3, angles.theta4);
             move_to_point(wrist_point.x, wrist_point.y, wrist_point.z, "wrist");
@@ -349,12 +342,10 @@ void loop() {
         Serial.println(move_step);
     }
     
-    // Zapisz aktualne stany przycisków
     lastTriangleState = triangle;
     lastCircleState = circle;
     lastCrossState = cross;
     
-    // Odczyt wejścia z pada i obliczenie nowej pozycji
     Point3D new_position = process_PS4_input(current_position);
     
     if (new_position.x != current_position.x || 
@@ -366,7 +357,6 @@ void loop() {
         
         current_position = new_position;
         
-        // Wyświetlanie pozycji co 500ms
         if (millis() - lastPrintTime > 500) {
             Serial.print("Position: (");
             Serial.print(current_position.x);
